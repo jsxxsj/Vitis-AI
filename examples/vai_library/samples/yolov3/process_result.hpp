@@ -29,11 +29,96 @@ static cv::Scalar getColor(int label) {
   return cv::Scalar(c[2], c[1], c[0]);
 }
 
+// the one from huggingface yolov3 coco doc: https://huggingface.co/amd/yolov3/blame/refs%2Fpr%2F2/coco.names
+static const char* coco_labels[] coco_labels = {
+    "person",
+    "bicycle",
+    "car",
+    "motorcycle",
+    "airplane",
+    "bus",
+    "train",
+    "truck",
+    "boat",
+    "traffic light",
+    "fire hydrant",
+    "stop sign",
+    "parking meter",
+    "bench",
+    "bird",
+    "cat",
+    "dog",
+    "horse",
+    "sheep",
+    "cow",
+    "elephant",
+    "bear",
+    "zebra",
+    "giraffe",
+    "backpack",
+    "umbrella",
+    "handbag",
+    "tie",
+    "suitcase",
+    "frisbee",
+    "skis",
+    "snowboard",
+    "sports ball",
+    "kite",
+    "baseball bat",
+    "baseball glove",
+    "skateboard",
+    "surfboard",
+    "tennis racket",
+    "bottle",
+    "wine glass",
+    "cup",
+    "fork",
+    "knife",
+    "spoon",
+    "bowl",
+    "banana",
+    "apple",
+    "sandwich",
+    "orange",
+    "broccoli",
+    "carrot",
+    "hot dog",
+    "pizza",
+    "donut",
+    "cake",
+    "chair",
+    "couch",
+    "potted plant",
+    "bed",
+    "dining table",
+    "toilet",
+    "tv",
+    "laptop",
+    "mouse",
+    "remote",
+    "keyboard",
+    "cell phone",
+    "microwave",
+    "oven",
+    "toaster",
+    "sink",
+    "refrigerator",
+    "book",
+    "clock",
+    "vase",
+    "scissors",
+    "teddy bear",
+    "hair drier",
+    "toothbrush"
+};
+
 static cv::Mat process_result(cv::Mat &image,
                               const vitis::ai::YOLOv3Result &result,
                               bool is_jpeg) {
   for (const auto bbox : result.bboxes) {
     int label = bbox.label;
+    const char* tag = coco_labels[label]; //hard-coded tags, need to change if change model and/or dataset
     float xmin = bbox.x * image.cols + 1;
     float ymin = bbox.y * image.rows + 1;
     float xmax = xmin + bbox.width * image.cols;
@@ -46,6 +131,16 @@ static cv::Mat process_result(cv::Mat &image,
                           << "\n";
     cv::rectangle(image, cv::Point(xmin, ymin), cv::Point(xmax, ymax),
                   getColor(label), 1, 1, 0);
+    // Put text above the top-left corner (outside the box)
+    int offset = 5; // pixels above the box
+    int y_text = (ymin - offset > 0) ? ymin - offset : ymin + offset; // clip if too high, note y0 is the top line part
+    cv::putText(image,
+            class_name,
+            cv::Point(xmin, y_text),
+            cv::FONT_HERSHEY_SIMPLEX,
+            0.5,             // font scale, 0.5~0.7 is ok
+            getColor(label), // text color
+            1);              // thickness
   }
   return image;
 }
